@@ -56,7 +56,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
-
 www = Path(f"users")
 admin=963729102
 CHANNEL_ID = -1002707833409
