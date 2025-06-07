@@ -1104,10 +1104,12 @@ async def stop_script(message: types.Message):
 @dp.message(F.text == 'Users')
 async def stop_script(message: types.Message, state: FSMContext):
     global admin
-    await message.answer(f"Пользователей {count_piple()[0][0]}")
     user_id = message.from_user.id
     if not(user_id in admin):
         return
+    await message.answer(f"Пользователей {count_piple()[0][0]}")
+    user_id = message.from_user.id
+
     df = userss()
     with open("users.txt","a") as file:
         for i in df:
@@ -1495,6 +1497,9 @@ async def start_broadcast_handler(message: types.Message, state: FSMContext):
 @dp.message(StateFilter(BroadcastState.file_chek))
 async def create_zip_handler(message: types.Message, state: FSMContext):
     global filr_ch
+    user_id = message.from_user.id
+    if not(user_id in admin):
+        return
     if not message.text:
         await message.answer("Отправить надо тестом!")
         return
@@ -1513,6 +1518,9 @@ async def create_zip_handler(message: types.Message, state: FSMContext):
 @dp.message(F.text == 'Все file')
 async def create_zip_handler(message: types.Message):
     global filr_ch
+    user_id = message.from_user.id
+    if not(user_id in admin):
+        return
     await message.answer("Загрузка...",reply_markup=download_id)
     user_id = filr_ch
     user_dir = f"users/{user_id}"
@@ -1535,6 +1543,9 @@ async def create_zip_handler(message: types.Message):
 @dp.message(F.text == "По 1 file")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
     global filr_ch
+    user_id = message.from_user.id
+    if not(user_id in admin):
+        return
     base_path = Path(f"users/{filr_ch}")
     
     if not base_path.exists():
@@ -1574,6 +1585,9 @@ async def start_broadcast_handler(message: types.Message, state: FSMContext):
 @dp.message(StateFilter(BroadcastState.one_file_admin))
 async def create_zip_handler(message: types.Message, state: FSMContext):
     global filr_ch
+    user_id = message.from_user.id
+    if not(user_id in admin):
+        return
     if not message.text:
         await message.answer("Отправить надо тестом!")
         return
