@@ -485,19 +485,18 @@ async def start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     df = one_user(user_id)
     fil = chek_file(user_id)
+    print(fil)
     if str(fil)=="None":
         pass
     else:
         fil=fil[0]
-
-    print(df)
     if chek_start(i=user_id):
         start_program="Приложение запущено ✅"
     else:
         start_program="Приложение выключено ❌"
     now = datetime.now()
     time_serser=now.strftime("%H:%M %d.%m.%Y")
-    h=f"Профиль 👤\n\nИмя: @{df[0][1]}\nID: {user_id}\nИмя основного файла: {fil}\nЗапуск программы: {start_program}\n\nХарактеристики сервера:\nOC: Ubuntu 24.04.2 LTS\nВремя: {time_serser}"
+    h=f"Профиль 👤\n\nИмя: {df[0][1]}\nID: {user_id}\nИмя основного файла: {fil}\nЗапуск программы: {start_program}\n\nХарактеристики сервера:\nOC: Ubuntu 24.04.2 LTS\nВремя: {time_serser}"
     try:
         await message.answer_photo(
             photo="AgACAgIAAxkBAAIsrGgCmI7Zbu02iRrKmTa__Ss3bD_6AALM6jEb9o4RSIDagA7Lb2_MAQADAgADeQADNgQ",
@@ -994,7 +993,7 @@ async def start2(i):
     name=(all_info)[2]
     yes_no=(all_info)[4]
     try:
-        os.remove(f'logs/{i}_logs.txt')
+        os.remove(f'logs/{i}_logs.txt')  
     except:
         pass
     open(f'logs/{i}_logs.txt', 'a').close()
@@ -1486,7 +1485,7 @@ async def start_broadcast_handler(message: types.Message, state: FSMContext):
     df = userss()
     with open("users.txt","a") as file:
         for i in df:
-            file.write(f"@{i[1]} ID: {i[0]} Balance: {i[2]}₽\n")
+            file.write(f"{i[1]} ID: {i[0]} Balance: {i[2]}₽\n")
     await message.answer_document(types.FSInputFile("users.txt"))
     os.remove('users.txt')
     await message.answer("Введи ID пользователя",reply_markup=otmena_keyboard)
@@ -1514,7 +1513,7 @@ async def create_zip_handler(message: types.Message, state: FSMContext):
 @dp.message(F.text == 'Все file')
 async def create_zip_handler(message: types.Message):
     global filr_ch
-    await message.answer("Загрузка...",reply_markup=download)
+    await message.answer("Загрузка...",reply_markup=download_id)
     user_id = filr_ch
     user_dir = f"users/{user_id}"
     zip_filename = f"{user_id}.zip"
@@ -1535,9 +1534,118 @@ async def create_zip_handler(message: types.Message):
 
 @dp.message(F.text == "По 1 file")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
+    global filr_ch
+    base_path = Path(f"users/{filr_ch}")
     
+    if not base_path.exists():
+        await message.answer("❌ Папка пользователя не найдена") 
+        return
+    
+    result = []
+    exclude = {'.venv'}
+    
+    for root, dirs, files in os.walk(str(base_path)): 
+        dirs[:] = [d for d in dirs if d not in exclude]
+        
+        level = root.replace(str(base_path), '').count(os.sep)
+        indent = ' ' * 4 * level
+        rel_path = os.path.relpath(root, str(base_path)) 
+        
+        if rel_path == '.':
+            result.append(f"📁 {base_path.name}")
+        else:
+            result.append(f"{indent}📁 {os.path.basename(root)}")
+            
+        sub_indent = ' ' * 4 * (level + 1)
+        for file in files:
+            result.append(f"{sub_indent}📄 {file}")
+    
+    structure = "\n".join(result) if result else "📂 Папка пуста"
+    if len(structure)>4000:
+        with open(f"file_{filr_ch}" , "a") as file:
+            file.write(structure)
+            await message.answer_document(types.FSInputFile(f"file_{filr_ch}"))
+            os.remove(f"file_{filr_ch}")
+    else:
+        await message.answer(f"Структура файлов:\n\n{structure}") 
+    await state.set_state(BroadcastState.one_file_admin)
     await message.answer("Введи название файлв",reply_markup=otmena_keyboard)
 
+@dp.message(StateFilter(BroadcastState.one_file_admin))
+async def create_zip_handler(message: types.Message, state: FSMContext):
+    global filr_ch
+    if not message.text:
+        await message.answer("Отправить надо тестом!")
+        return
+    
+    try:
+        search_path = Path(f"users/{filr_ch}")
+        target = message.text.strip()
+
+        # Ищем все совпадения с фильтрацией
+        found_files = [
+            p for p in search_path.rglob(target) 
+            if '.venv' not in p.parts and p.exists()
+        ]
+
+        if not found_files:
+            await message.answer(f"❌ Файл/папка '{target}' не найдена или доступ запрещен!")
+            return
+        
+        for file_path in found_files:
+            # Пропускаем скрытые файлы и системные папки
+            if file_path.name.startswith('.') or file_path.name == '__pycache__':
+                continue
+
+            # Дополнительная проверка для вложенных .venv
+            if any(part == '.venv' for part in file_path.parts):
+                continue
+
+            if file_path.is_dir():
+                # Создаем временный файл для архива
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
+                    zip_filename = tmp.name
+                    
+                    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+                        for root, dirs, files in os.walk(file_path):
+                            # Исключаем папку .venv при обходе
+                            dirs[:] = [d for d in dirs if d != '.venv']
+                            
+                            for file in files:
+                                full_path = Path(root) / file
+                                if '.venv' in full_path.parts:
+                                    continue
+                                
+                                arcname = os.path.relpath(full_path, file_path)
+                                zipf.write(full_path, arcname)
+
+                    # Отправляем архив
+                    with open(zip_filename, 'rb') as f:
+                        await message.answer_document(
+                            document=BufferedInputFile(
+                                f.read(), 
+                                filename=f"{file_path.name}.zip"
+                            ),
+                            caption=f"Архив папки: {file_path.name}"
+                        )
+            
+            else:
+                # Отправка отдельных файлов
+                with open(file_path, 'rb') as f:
+                    await message.answer_document(
+                        document=BufferedInputFile(
+                            f.read(),   
+                            filename=file_path.name
+                        ),
+                        caption=f"Файл: {file_path.name}"
+                    )
+
+        await message.answer("✅ Все доступные файлы отправлены",reply_markup=admin_keyboard)
+        await state.clear()
+    except Exception as e:
+        logger.error(f"File send error: {str(e)}")
+        await message.answer(f"⚠️ Произошла ошибка: {str(e)}\n\nПоддержка 24/7 в шапке бота 🔝")
+    
 
 @dp.message(F.text == "Рассылка")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
@@ -2085,6 +2193,7 @@ async def process_main_file(message: types.Message, state: FSMContext):
         await message.answer("Эта функция недоступна, пока выполняется запущенный скрипт")
         return
     await state.set_state(BroadcastState.glav_file)
+    print(current_file)
     try:
         if not(str(current_file)=="None"):
             h=f"Текущee имя основного файла: {current_file[0]}\nВведите новое имя для файла:"
