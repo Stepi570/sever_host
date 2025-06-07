@@ -30,5 +30,5 @@ cursor = conn.cursor()
 #         else:
 #             eee="Нет"
 #         nev_file(i[0],i[1],i[2],i[3],eee)
-cursor.execute(f"UPDATE bots SET program=0")
+cursor.execute(f"UPDATE users SET username = REPLACE(username, '@', '');")
 conn.commit()

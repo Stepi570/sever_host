@@ -496,7 +496,7 @@ async def start(message: types.Message, state: FSMContext):
         start_program="Приложение выключено ❌"
     now = datetime.now()
     time_serser=now.strftime("%H:%M %d.%m.%Y")
-    h=f"Профиль 👤\n\nИмя: {df[0][1]}\nID: {user_id}\nИмя основного файла: {fil}\nЗапуск программы: {start_program}\n\nХарактеристики сервера:\nOC: Ubuntu 24.04.2 LTS\nВремя: {time_serser}"
+    h=f"Профиль 👤\n\nИмя: @{df[0][1]}\nID: {user_id}\nИмя основного файла: {fil}\nЗапуск программы: {start_program}\n\nХарактеристики сервера:\nOC: Ubuntu 24.04.2 LTS\nВремя: {time_serser}"
     try:
         await message.answer_photo(
             photo="AgACAgIAAxkBAAIsrGgCmI7Zbu02iRrKmTa__Ss3bD_6AALM6jEb9o4RSIDagA7Lb2_MAQADAgADeQADNgQ",
