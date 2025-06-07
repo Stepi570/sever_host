@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
 www = Path(f"users")
-admin=963729102
+admin=[963729102,1624096187]
 CHANNEL_ID = -1002707833409
 www.mkdir(parents=True, exist_ok=True)
 bot = Bot(token=API_TOKEN, request_timeout=300)
@@ -514,7 +514,7 @@ async def start(message: types.Message, state: FSMContext):
 async def start(message: types.Message, state: FSMContext):
     global admin
     user_id = message.from_user.id
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await message.answer("Введи ID пользователя")
     await state.set_state(BroadcastState.Message_from_human)
@@ -787,7 +787,7 @@ async def send_db_periodically():
         try:
             now = datetime.now()
             await bot.send_document(CHANNEL_ID, FSInputFile("users.db"), caption=now.strftime("%d.%m.%Y %H:%M:%S"))
-            await asyncio.sleep(18)  # Асинхронный sleep (не time.sleep!)
+            await asyncio.sleep(1800)  # Асинхронный sleep (не time.sleep!)
         except Exception as e:
             print(f"Ошибка: {e}")
             await asyncio.sleep(10)
@@ -831,7 +831,7 @@ active_processes = defaultdict(list)
 async def show_active_processes(message: types.Message):
     user_id = message.from_user.id
     global admin
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await message.answer_document(types.FSInputFile("users.db"))
 
@@ -842,7 +842,7 @@ async def show_active_processes(message: types.Message):
     y=[]
     user_id = message.from_user.id
     global admin
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await send_stats(message.chat.id)
     temp=(temperature())[::-1]
@@ -875,7 +875,7 @@ async def show_active_processes(message: types.Message):
 async def show_active_processes(message: types.Message):
     user_id = message.from_user.id
     global admin
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     try:
         count = 0
@@ -1098,7 +1098,7 @@ async def start_csv():
 async def stop_script(message: types.Message):
     user_id = message.from_user.id
     global admin
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await message.answer("Добро пожаловать Админ!",reply_markup=admin_keyboard)
     
@@ -1107,7 +1107,7 @@ async def stop_script(message: types.Message, state: FSMContext):
     global admin
     await message.answer(f"Пользователей {count_piple()[0][0]}")
     user_id = message.from_user.id
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     df = userss()
     with open("users.txt","a") as file:
@@ -1365,7 +1365,7 @@ async def stop_script(message: types.Message, state: FSMContext):
 async def adminn(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     global admin
-    if not(user_id==admin):
+    if not(user_id in admin):
         return
     await message.answer("Выбри сообщения:",reply_markup=sms_keyboard)
 
@@ -1373,7 +1373,7 @@ async def adminn(message: types.Message, state: FSMContext):
 async def adminn(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     global admin
-    if not(user_id==admin):
+    if not(user_id in admin):
         return
     df = userss()
     with open("users.txt","a") as file:
@@ -1440,6 +1440,7 @@ async def stop_script(message: types.Message, state: FSMContext):
     else:
         await message.answer(f"Структура файлов:\n\n{structure}") 
     await message.answer(f"Готово",reply_markup=admin_keyboard) 
+    await state.clear()
 
 @dp.message(F.text=="Сообщение пользователю")
 async def adminn(message: types.Message, state: FSMContext):
@@ -1480,7 +1481,7 @@ async def broadcast_message(message: types.Message, state: FSMContext, bot_messa
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
     global admin
     user_id = message.from_user.id
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     df = userss()
     with open("users.txt","a") as file:
@@ -1513,7 +1514,7 @@ async def create_zip_handler(message: types.Message, state: FSMContext):
 @dp.message(F.text == 'Все file')
 async def create_zip_handler(message: types.Message):
     global filr_ch
-    await message.answer("Загрузка...",reply_markup=admin_keyboard)
+    await message.answer("Загрузка...",reply_markup=download)
     user_id = filr_ch
     user_dir = f"users/{user_id}"
     zip_filename = f"{user_id}.zip"
@@ -1534,125 +1535,16 @@ async def create_zip_handler(message: types.Message):
 
 @dp.message(F.text == "По 1 file")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
-    global filr_ch
-    base_path = Path(f"users/{filr_ch}")
     
-    if not base_path.exists():
-        await message.answer("❌ Папка пользователя не найдена") 
-        return
-    
-    result = []
-    exclude = {'.venv'}
-    
-    for root, dirs, files in os.walk(str(base_path)): 
-        dirs[:] = [d for d in dirs if d not in exclude]
-        
-        level = root.replace(str(base_path), '').count(os.sep)
-        indent = ' ' * 4 * level
-        rel_path = os.path.relpath(root, str(base_path)) 
-        
-        if rel_path == '.':
-            result.append(f"📁 {base_path.name}")
-        else:
-            result.append(f"{indent}📁 {os.path.basename(root)}")
-            
-        sub_indent = ' ' * 4 * (level + 1)
-        for file in files:
-            result.append(f"{sub_indent}📄 {file}")
-    
-    structure = "\n".join(result) if result else "📂 Папка пуста"
-    if len(structure)>4000:
-        with open(f"file_{filr_ch}" , "a") as file:
-            file.write(structure)
-            await message.answer_document(types.FSInputFile(f"file_{filr_ch}"))
-            os.remove(f"file_{filr_ch}")
-    else:
-        await message.answer(f"Структура файлов:\n\n{structure}") 
     await message.answer("Введи название файлв",reply_markup=otmena_keyboard)
-    await state.set_state(BroadcastState.one_file_admin)
 
-@dp.message(StateFilter(BroadcastState.one_file_admin))
-async def create_zip_handler(message: types.Message, state: FSMContext):
-    global filr_ch
-    if not message.text:
-        await message.answer("Отправить надо тестом!")
-        return
-    
-    try:
-        search_path = Path(f"users/{filr_ch}")
-        target = message.text.strip()
 
-        # Ищем все совпадения с фильтрацией
-        found_files = [
-            p for p in search_path.rglob(target) 
-            if '.venv' not in p.parts and p.exists()
-        ]
-
-        if not found_files:
-            await message.answer(f"❌ Файл/папка '{target}' не найдена или доступ запрещен!")
-            return
-        
-        for file_path in found_files:
-            # Пропускаем скрытые файлы и системные папки
-            if file_path.name.startswith('.') or file_path.name == '__pycache__':
-                continue
-
-            # Дополнительная проверка для вложенных .venv
-            if any(part == '.venv' for part in file_path.parts):
-                continue
-
-            if file_path.is_dir():
-                # Создаем временный файл для архива
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
-                    zip_filename = tmp.name
-                    
-                    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-                        for root, dirs, files in os.walk(file_path):
-                            # Исключаем папку .venv при обходе
-                            dirs[:] = [d for d in dirs if d != '.venv']
-                            
-                            for file in files:
-                                full_path = Path(root) / file
-                                if '.venv' in full_path.parts:
-                                    continue
-                                
-                                arcname = os.path.relpath(full_path, file_path)
-                                zipf.write(full_path, arcname)
-
-                    # Отправляем архив
-                    with open(zip_filename, 'rb') as f:
-                        await message.answer_document(
-                            document=BufferedInputFile(
-                                f.read(), 
-                                filename=f"{file_path.name}.zip"
-                            ),
-                            caption=f"Архив папки: {file_path.name}"
-                        )
-            
-            else:
-                # Отправка отдельных файлов
-                with open(file_path, 'rb') as f:
-                    await message.answer_document(
-                        document=BufferedInputFile(
-                            f.read(),   
-                            filename=file_path.name
-                        ),
-                        caption=f"Файл: {file_path.name}"
-                    )
-
-        await message.answer("✅ Все доступные файлы отправлены",reply_markup=admin_keyboard)
-
-    except Exception as e:
-        logger.error(f"File send error: {str(e)}")
-        await message.answer(f"⚠️ Произошла ошибка: {str(e)}\n\nПоддержка 24/7 в шапке бота 🔝")
-
-        
 @dp.message(F.text == "Рассылка")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
     """Обработчик команды /send_broadcast"""
     global admin
     user_id = message.from_user.id
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await message.answer("Отправьте мне сообщение, которое вы хотите разослать пользователям:")
     await state.set_state(BroadcastState.waiting_for_message)  # Переключаем бота в состояние ожидания сообщения для рассылки
@@ -1661,7 +1553,7 @@ async def get_broadcast_message_handler(message: types.Message, state: FSMContex
     """Получение сообщения для рассылки"""
     global admin
     user_id = message.from_user.id
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     await state.update_data(message_to_broadcast=message)  # Сохраняем сообщение
     await message.answer(
@@ -1673,7 +1565,7 @@ async def get_broadcast_message_handler(message: types.Message, state: FSMContex
 async def confirm_broadcast_handler(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     global admin
-    if not(user_id == admin):
+    if not(user_id in admin):
         return
     data = await state.get_data()
     message_to_broadcast = data.get("message_to_broadcast")
@@ -1869,7 +1761,7 @@ async def handle_file(message: types.Message, state: FSMContext):
                 capture_output=True,
                 text=True,
                 timeout=400)
-            await message.answer(f"✅ Успешное установлено:\n{process.stdout[:4000]}",reply_markup=main_keyboard)
+            await message.answer(f"✅ Успешное установлено:\n{process.stdout[:4000]}")
         else:
             await message.answer("Загрузка...")
             process = subprocess.run(
@@ -1881,7 +1773,7 @@ async def handle_file(message: types.Message, state: FSMContext):
             if process=="":
                 await message.answer("Данная библиотека не найдена")
                 return
-            await message.answer(f"✅ Библиотека удалена успешно:\n{process.stdout[:4000]}",reply_markup=main_keyboard)
+            await message.answer(f"✅ Библиотека удалена успешно:\n{process.stdout[:4000]}")
     except subprocess.CalledProcessError as e:
         await message.answer(f"❌ Ошибка установки/удаления:\n{e.stderr[:4000]}\n\nПоддержка 24/7 в шапке бота 🔝")
     except subprocess.TimeoutExpired:
@@ -2262,7 +2154,7 @@ async def handle_main_file(message: types.Message, state: FSMContext):
             return
         user_id=str(message.from_user.id)
         if chek_file(user_id) == None:
-            nev_file(message.from_user.username,user_id,new_file,1,"Нет")
+            nev_file(message.from_user.username,user_id,new_file,0,"Нет")
         else:
             replase_file(user_id,new_file)
         if active_processes.get(user_id):
