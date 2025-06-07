@@ -1,9 +1,3 @@
-06.06.2025 21:01 [USER 963729102 LOG!!] INFO:__main__:Запуск бота...
-06.06.2025 21:01 [USER 963729102 LOG!!] INFO:aiogram.dispatcher:Start polling
-06.06.2025 21:01 [USER 963729102 LOG!!] INFO:aiogram.dispatcher:Run polling for bot @hsiviveuivbot id=8064787079 - 'Вкусно По-домашнему'
-06.06.2025 21:01 [USER 963729102 LOG!!] ERROR:aiogram.dispatcher:Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
-06.06.2025 21:01 [USER 963729102 LOG!!] WARNING:aiogram.dispatcher:Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8064787079)
-06.06.2025 21:02 [USER 963729102 LOG!!] ERROR:aiogram.dispatcher:Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
-06.06.2025 21:02 [USER 963729102 LOG!!] WARNING:aiogram.dispatcher:Sleep for 1.050131 seconds and try again... (tryings = 1, bot id = 8064787079)
-06.06.2025 21:02 [USER 963729102 LOG!!] ERROR:aiogram.dispatcher:Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
-06.06.2025 21:02 [USER 963729102 LOG!!] WARNING:aiogram.dispatcher:Sleep for 1.443780 seconds and try again... (tryings = 2, bot id = 8064787079)
+07.06.2025 09:50 [USER 963729102 LOG!!] INFO:__main__:Запуск бота...
+07.06.2025 09:50 [USER 963729102 LOG!!] INFO:aiogram.dispatcher:Start polling
+07.06.2025 09:50 [USER 963729102 LOG!!] INFO:aiogram.dispatcher:Run polling for bot @hsiviveuivbot id=8064787079 - 'Вкусно По-домашнему'

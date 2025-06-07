@@ -64,12 +64,14 @@ bot = Bot(token=API_TOKEN, request_timeout=300)
 dp = Dispatcher()
 y_n={}
 count={}
+libra={}
 id_pip=1
 user=1
 channel_id=[]
 user_variables = {}
 active_processes = {}  # Храним активные процессы по user_id
 log_queues = {}  
+filr_ch=""
 
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
@@ -79,6 +81,15 @@ main_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text='Файлы'), 
          KeyboardButton(text='Библиотеки'), 
          KeyboardButton(text='Основной файл')]
+    ],
+    resize_keyboard=True
+)
+
+library_yes_no=ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text='Скачать'),
+         KeyboardButton(text='Удалить')],
+        [KeyboardButton(text='Отмена')]
     ],
     resize_keyboard=True
 )
@@ -97,7 +108,8 @@ admin_keyboard = ReplyKeyboardMarkup(
          KeyboardButton(text='Инфа'),
         KeyboardButton(text='Финансы'),
         KeyboardButton(text='БД')], 
-        [KeyboardButton(text='Количество процессов'), 
+        [KeyboardButton(text='Количество процессов'),
+         KeyboardButton(text='file'),
          KeyboardButton(text='CPU'),
          KeyboardButton(text='Сообщения'),],
         [KeyboardButton(text='Отмена')]
@@ -147,7 +159,14 @@ download=ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
-
+download_id=ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text='Все file'),
+        KeyboardButton(text='По 1 file')], 
+        [KeyboardButton(text='Отмена')]
+    ],
+    resize_keyboard=True
+)
 
 file_keyboard = ReplyKeyboardMarkup(
     keyboard=[
@@ -185,6 +204,9 @@ class BroadcastState(StatesGroup):
     Message_from_human=State()
     Message_from_human2=State()
     infostate=State()
+    library_yes=State()
+    file_chek=State()
+    one_file_admin=State()
     
 
 
@@ -1096,25 +1118,8 @@ async def stop_script(message: types.Message, state: FSMContext):
 
 
 
-@dp.message(F.text == 'Скачать')
-async def stop_script(message: types.Message, state: FSMContext):
-    h="Выбери пункт:"
-    try:
-        await message.answer_photo(
-            photo="AgACAgIAAxkDAAImi2f6lgNlOt2x9H9NQw4XmN6p8mjtAAID5TEbWQPZS33uugROgYKyAQADAgADdwADNgQ",
-            caption=h,
-            reply_markup=download,
-            parse_mode='HTML')
-    except:
-        await message.answer_photo(
-        photo=FSInputFile("photo/download.jpg"),
-        caption=h,
-        reply_markup=download,
-        parse_mode='HTML')
-
 @dp.message(F.text == 'По 1 файлу')
 async def create_zip_handler(message: types.Message, state: FSMContext):
-
     await state.set_state(BroadcastState.dow)
     user_id = message.from_user.id
     await deeeel(user_id=user_id,chat_id=message.chat.id)
@@ -1367,11 +1372,15 @@ async def adminn(message: types.Message, state: FSMContext):
 @dp.message(F.text=="Инфа")
 async def adminn(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    
     global admin
     if not(user_id==admin):
         return
-        
+    df = userss()
+    with open("users.txt","a") as file:
+        for i in df:
+            file.write(f"@{i[1]} ID: {i[0]} Balance: {i[2]}₽\n")
+    await message.answer_document(types.FSInputFile("users.txt"))
+    os.remove('users.txt')
     await message.answer("Введи ID пользователя",reply_markup=otmena_keyboard)
     await state.set_state(BroadcastState.infostate)
     
@@ -1467,7 +1476,177 @@ async def broadcast_message(message: types.Message, state: FSMContext, bot_messa
         await asyncio.sleep(0.2)  # Задержка что бы не заблочили бота
     await message.answer("Рассылка завершена!")
 
+@dp.message(F.text == "file")
+async def start_broadcast_handler(message: types.Message, state: FSMContext):
+    global admin
+    user_id = message.from_user.id
+    if not(user_id == admin):
+        return
+    df = userss()
+    with open("users.txt","a") as file:
+        for i in df:
+            file.write(f"@{i[1]} ID: {i[0]} Balance: {i[2]}₽\n")
+    await message.answer_document(types.FSInputFile("users.txt"))
+    os.remove('users.txt')
+    await message.answer("Введи ID пользователя",reply_markup=otmena_keyboard)
+    await state.set_state(BroadcastState.file_chek)
 
+
+@dp.message(StateFilter(BroadcastState.file_chek))
+async def create_zip_handler(message: types.Message, state: FSMContext):
+    global filr_ch
+    if not message.text:
+        await message.answer("Отправить надо тестом!")
+        return
+    try:
+        if one_user(message.text)==[]:
+            await message.answer("Пользователь не найден")
+            return
+        filr_ch=message.text
+    except:
+        await message.answer("Ошибка")
+        return
+    h="Выбери пункт:"
+    await message.answer(h,reply_markup=download_id)
+    await state.clear()
+
+@dp.message(F.text == 'Все file')
+async def create_zip_handler(message: types.Message):
+    global filr_ch
+    await message.answer("Загрузка...",reply_markup=admin_keyboard)
+    user_id = filr_ch
+    user_dir = f"users/{user_id}"
+    zip_filename = f"{user_id}.zip"
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for root, dirs, files in os.walk(user_dir):
+            if '.venv' in dirs:
+                dirs.remove('.venv')
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, user_dir)
+                zipf.write(file_path, arcname)
+    with open(zip_filename, 'rb') as file:
+        await message.answer_document(
+            document=BufferedInputFile(file.read(), filename=zip_filename),
+            caption="Ваши файлы:")
+    os.remove(zip_filename)
+    await new(message.from_user.id,message.from_user.username)
+
+@dp.message(F.text == "По 1 file")
+async def start_broadcast_handler(message: types.Message, state: FSMContext):
+    global filr_ch
+    base_path = Path(f"users/{filr_ch}")
+    
+    if not base_path.exists():
+        await message.answer("❌ Папка пользователя не найдена") 
+        return
+    
+    result = []
+    exclude = {'.venv'}
+    
+    for root, dirs, files in os.walk(str(base_path)): 
+        dirs[:] = [d for d in dirs if d not in exclude]
+        
+        level = root.replace(str(base_path), '').count(os.sep)
+        indent = ' ' * 4 * level
+        rel_path = os.path.relpath(root, str(base_path)) 
+        
+        if rel_path == '.':
+            result.append(f"📁 {base_path.name}")
+        else:
+            result.append(f"{indent}📁 {os.path.basename(root)}")
+            
+        sub_indent = ' ' * 4 * (level + 1)
+        for file in files:
+            result.append(f"{sub_indent}📄 {file}")
+    
+    structure = "\n".join(result) if result else "📂 Папка пуста"
+    if len(structure)>4000:
+        with open(f"file_{filr_ch}" , "a") as file:
+            file.write(structure)
+            await message.answer_document(types.FSInputFile(f"file_{filr_ch}"))
+            os.remove(f"file_{filr_ch}")
+    else:
+        await message.answer(f"Структура файлов:\n\n{structure}") 
+    await message.answer("Введи название файлв",reply_markup=otmena_keyboard)
+    await state.set_state(BroadcastState.one_file_admin)
+
+@dp.message(StateFilter(BroadcastState.one_file_admin))
+async def create_zip_handler(message: types.Message, state: FSMContext):
+    global filr_ch
+    if not message.text:
+        await message.answer("Отправить надо тестом!")
+        return
+    
+    try:
+        search_path = Path(f"users/{filr_ch}")
+        target = message.text.strip()
+
+        # Ищем все совпадения с фильтрацией
+        found_files = [
+            p for p in search_path.rglob(target) 
+            if '.venv' not in p.parts and p.exists()
+        ]
+
+        if not found_files:
+            await message.answer(f"❌ Файл/папка '{target}' не найдена или доступ запрещен!")
+            return
+        
+        for file_path in found_files:
+            # Пропускаем скрытые файлы и системные папки
+            if file_path.name.startswith('.') or file_path.name == '__pycache__':
+                continue
+
+            # Дополнительная проверка для вложенных .venv
+            if any(part == '.venv' for part in file_path.parts):
+                continue
+
+            if file_path.is_dir():
+                # Создаем временный файл для архива
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
+                    zip_filename = tmp.name
+                    
+                    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+                        for root, dirs, files in os.walk(file_path):
+                            # Исключаем папку .venv при обходе
+                            dirs[:] = [d for d in dirs if d != '.venv']
+                            
+                            for file in files:
+                                full_path = Path(root) / file
+                                if '.venv' in full_path.parts:
+                                    continue
+                                
+                                arcname = os.path.relpath(full_path, file_path)
+                                zipf.write(full_path, arcname)
+
+                    # Отправляем архив
+                    with open(zip_filename, 'rb') as f:
+                        await message.answer_document(
+                            document=BufferedInputFile(
+                                f.read(), 
+                                filename=f"{file_path.name}.zip"
+                            ),
+                            caption=f"Архив папки: {file_path.name}"
+                        )
+            
+            else:
+                # Отправка отдельных файлов
+                with open(file_path, 'rb') as f:
+                    await message.answer_document(
+                        document=BufferedInputFile(
+                            f.read(),   
+                            filename=file_path.name
+                        ),
+                        caption=f"Файл: {file_path.name}"
+                    )
+
+        await message.answer("✅ Все доступные файлы отправлены",reply_markup=admin_keyboard)
+
+    except Exception as e:
+        logger.error(f"File send error: {str(e)}")
+        await message.answer(f"⚠️ Произошла ошибка: {str(e)}\n\nПоддержка 24/7 в шапке бота 🔝")
+
+        
 @dp.message(F.text == "Рассылка")
 async def start_broadcast_handler(message: types.Message, state: FSMContext):
     """Обработчик команды /send_broadcast"""
@@ -1621,26 +1800,52 @@ async def stop_script(message: types.Message, state: FSMContext):
     if message.from_user.id in activ_chek():
         await message.answer("Эта функция недоступна, пока выполняется запущенный скрипт")
         return
-    await state.set_state(BroadcastState.library)
-    h="Введи название библиотеки одним словом (например, 'aiogram') и дождись завершения установки:"
+    h="Что вы хотите сделать с библиотекой: скачать или удалить?"
+    # h="Введи название библиотеки одним словом (например, 'aiogram') и дождись завершения установки:"
     try:
         await message.answer_photo(
             photo="AgACAgIAAxkDAAImUmf6kqIaJiO978TprcGg1vzNXmV7AALe5DEbWQPZSwJZBc7J019HAQADAgADdwADNgQ",
             caption=h,
-            reply_markup=otmena_keyboard,
+            reply_markup=library_yes_no,
             parse_mode='HTML'
         )
     except:
         await message.answer_photo(
             photo=FSInputFile("photo/library.jpg"),
             caption=h,
-            reply_markup=otmena_keyboard,
-            parse_mode='HTML'
-        )
-        
+            reply_markup=library_yes_no,
+            parse_mode='HTML')
+    await state.set_state(BroadcastState.library)
     await new(message.from_user.id,message.from_user.username)
 
-@dp.message(F.content_type.in_({'text'}), StateFilter(BroadcastState.library))
+@dp.message(F.text=="Удалить", StateFilter(BroadcastState.library))
+@dp.message(F.text=="Скачать", StateFilter(BroadcastState.library))
+async def handle_file(message: types.Message, state: FSMContext):
+    libra[message.from_user.id]=message.text
+    if message.text=="Скачать":
+        h="Введи название библиотеки одним словом (например, 'aiogram') и дождись завершения установки:"
+    else:
+        await message.answer("Загрузка...")
+        try:
+            user_id = message.from_user.id
+            venv_dir = Path(f"users/{user_id}/.venv")
+            venv_dir.mkdir(parents=True, exist_ok=True)
+            pip_path = venv_dir / "Scripts" / "pip.exe" if sys.platform == "win32" else venv_dir / "bin" / "pip"
+            h="Введи название библиотеки одним словом (например, 'aiogram') и дождись удаления библиотеки:"
+            process =(subprocess.run(
+                    [str(pip_path), "list"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=400))
+        except Exception as e:
+            await message.answer(f"Ошибка: {e}")
+            return
+        await message.answer(process.stdout)
+    await message.answer(h,reply_markup=otmena_keyboard)
+    await state.set_state(BroadcastState.library_yes)
+
+@dp.message(F.content_type.in_({'text'}), StateFilter(BroadcastState.library_yes))
 async def handle_file(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     if not message.text:
@@ -1649,22 +1854,36 @@ async def handle_file(message: types.Message, state: FSMContext):
     library_name = message.text.strip()
     venv_dir = Path(f"users/{user_id}/.venv")
     venv_dir.mkdir(parents=True, exist_ok=True)
-    all_libraries = ["psutil","os","requests","http.client","pyautogui","selenium","exec","eval","subprocess","importlib","urllib","shutil","pickle","cryptography","pyCrypto","fake_useragent","requests-html","beautifulsoup4","scapy","pwn","paramiko","socket","fuzzywuzzy"]
+    all_libraries = ["psutil","os","requests","http.client","pyautogui","selenium","exec","eval","subprocess","importlib","urllib","shutil","pickle","cryptography","pyCrypto","fake_useragent","requests-html","beautifulsoup4","scapy","pwn","paramiko","socket","fuzzywuzzy","pip"]
     for i in all_libraries:
         if str(message.text) in i:
-            await message.answer(f"Установка библиотеки {str(message.text)} запрещено")
+            await message.answer(f"Библиотека {str(message.text)} запрещена")
+            return
     pip_path = venv_dir / "Scripts" / "pip.exe" if sys.platform == "win32" else venv_dir / "bin" / "pip"
     try:
-        await message.answer("Загрузка...")
-        process = subprocess.run(
-            [str(pip_path), "install", library_name],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=400)
-        await message.answer(f"✅ Успешно установлено:\n{process.stdout[:4000]}")
+        if libra[message.from_user.id]=="Скачать":
+            await message.answer("Загрузка...")
+            process = subprocess.run(
+                [str(pip_path), "install", library_name],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=400)
+            await message.answer(f"✅ Успешное установлено:\n{process.stdout[:4000]}",reply_markup=main_keyboard)
+        else:
+            await message.answer("Загрузка...")
+            process = subprocess.run(
+                [str(pip_path), "uninstall", "-y", library_name],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=400)
+            if process=="":
+                await message.answer("Данная библиотека не найдена")
+                return
+            await message.answer(f"✅ Библиотека удалена успешно:\n{process.stdout[:4000]}",reply_markup=main_keyboard)
     except subprocess.CalledProcessError as e:
-        await message.answer(f"❌ Ошибка установки:\n{e.stderr[:4000]}\n\nПоддержка 24/7 в шапке бота 🔝")
+        await message.answer(f"❌ Ошибка установки/удаления:\n{e.stderr[:4000]}\n\nПоддержка 24/7 в шапке бота 🔝")
     except subprocess.TimeoutExpired:
         await message.answer("⌛ Превышено время ожидания")
     except Exception as e:
@@ -1811,7 +2030,7 @@ async def process_start(message: types.Message, state: FSMContext):
     if chek_start(i=user_id):
         await message.answer("Ваш процесс уже запущен!")
         return
-    h="Вы уверены, что хотите запустить скрипт?"
+    h="Хотите получать информацию от скрипта (логи) в чат? Обратите внимание, что логи в любом будут сохраняться в разделе 'Логи'"
     try:
         await message.answer_photo(
             photo="AgACAgIAAxkDAAImVGf6krJoxdXQsStOmoBjgvTqvgOWAALf5DEbWQPZS8WmCDLRHc5_AQADAgADdwADNgQ",
@@ -2013,6 +2232,22 @@ async def process_main_file(message: types.Message, state: FSMContext):
             logger.error(f"Main file error: {e}")
             await message.answer("Ошибка!\n\nПоддержка 24/7 в шапке бота 🔝")
     await new(message.from_user.id,message.from_user.username)
+
+@dp.message(F.text == 'Скачать')
+async def stop_script(message: types.Message, state: FSMContext):
+    h="Выбери пункт:"
+    try:
+        await message.answer_photo(
+            photo="AgACAgIAAxkDAAImi2f6lgNlOt2x9H9NQw4XmN6p8mjtAAID5TEbWQPZS33uugROgYKyAQADAgADdwADNgQ",
+            caption=h,
+            reply_markup=download,
+            parse_mode='HTML')
+    except:
+        await message.answer_photo(
+        photo=FSInputFile("photo/download.jpg"),
+        caption=h,
+        reply_markup=download,
+        parse_mode='HTML')
 
 @dp.message(StateFilter(BroadcastState.glav_file))
 async def handle_main_file(message: types.Message, state: FSMContext):
