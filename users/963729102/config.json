@@ -1,0 +1,16 @@
+{
+    "bot_token": "7667778972:AAGtJzQ4qADLJDZ9YpWJaN20P44jF-YhOKY",
+    "API_ID": 2040,
+    "API_HASH": "b18441a1ff607e10a989891a5462e627",
+    "admin_ids": [1764870690, 7753372971],
+    "bot_username": "fobiopizzzzabot",	
+    "crypto_pay_token": "380793:AAalJIU3TEMbu8EU4PgHWNDK5mMYUap4KlE",
+    "CHANNEL_ID": "-1002641582538",
+    "CHANNEL_USERNAME": "https://t.me/+WWshbrP-ZGA0ZTcx",
+    "profile_photo": "profile.jpg",
+    "menu_photo": "menu.jpg",
+    "DB_NAME": "subscriptions.db",
+    "referral_photo": "referral.jpg",
+    "SESSIONS_DIR": "sessions",
+    "LOG_CHANNEL_ID": "-1002583331436"
+}

@@ -1250,50 +1250,72 @@ async def handle_file(message: types.Message, state: FSMContext):
         
         file_ext = doc.file_name.split('.')[-1].lower()
         
-        if file_ext not in ('zip'):
+        if file_ext != 'zip':
             await message.answer("Пожалуйста, отправьте архив в формате ZIP")
+            try:
+                os.remove(file_path)
+            except:
+                pass
             return
-        if file_ext == 'zip':
+
+        # Обработка ZIP-архива
+        try:
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
-        # Получаем список всех элементов в архиве
                 namelist = zip_ref.namelist()
                 
-                # Проверяем, все ли файлы находятся внутри одной корневой директории
-                root_dirs = {name.split('/')[0] for name in namelist if '/' in name}
+                # Проверяем наличие единственной корневой директории
+                root_dirs = set()
+                root_files = []
+                for name in namelist:
+                    if '/' in name:
+                        root_dir = name.split('/')[0]
+                        root_dirs.add(root_dir)
+                    elif name:  # Файлы в корне архива
+                        root_files.append(name)
                 
-                if len(root_dirs) == 1:
-                    # Если есть одна корневая директория - извлекаем только её содержимое
+                # Извлекаем с игнорированием корня если:
+                # - Есть ровно одна корневая директория
+                # - Нет файлов в корне архива
+                if len(root_dirs) == 1 and not root_files:
                     root_dir = root_dirs.pop()
-                    for member in namelist:
-                        # Пропускаем саму корневую директорию
-                        if member == root_dir + '/':
-                            continue
-                        
-                        # Формируем новый путь без корневой директории
-                        new_path = member[len(root_dir)+1:]
-                        if not new_path:
-                            continue
-                        
-                        # Создаём полный путь для извлечения
-                        full_path = os.path.join(user_dir, new_path)
-                        
-                        # Создаём директории, если это папка
-                        if member.endswith('/'):
-                            os.makedirs(full_path, exist_ok=True)
-                        else:
-                            # Извлекаем файл
-                            with zip_ref.open(member) as source, open(full_path, 'wb') as target:
-                                target.write(source.read())
+                    # Создаем временную директорию для извлечения
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        zip_ref.extractall(tmpdir)
+                        # Переносим содержимое корневой папки в целевую директорию
+                        source_dir = os.path.join(tmpdir, root_dir)
+                        for item in os.listdir(source_dir):
+                            src = os.path.join(source_dir, item)
+                            dst = os.path.join(user_dir, item)
+                            if os.path.isdir(src):
+                                shutil.copytree(src, dst)
+                            else:
+                                shutil.copy2(src, dst)
                 else:
-                    # Если нет единой корневой директории - извлекаем как обычно
                     zip_ref.extractall(user_dir)
-                await message.answer("Готово") 
-            os.remove(f"users/{user_id}/{doc.file_name}")
+            
+            await message.answer("Архив успешно распакован!")
+        except Exception as e:
+            await message.answer(f"Ошибка при распаковке: {str(e)}")
+        finally:
+            # Всегда удаляем исходный архив
+            try:
+                os.remove(file_path)
+            except:
+                pass
+
         await state.clear()
-    except TelegramBadRequest as e:
+    except TelegramBadRequest:
         await message.answer("Файл слишком большой")
-    except:
-        await message.answer("Ошибка с файлом")
+        try:
+            os.remove(file_path)
+        except:
+            pass
+    except Exception as e:
+        await message.answer(f"Ошибка: {str(e)}")
+        try:
+            os.remove(file_path)
+        except:
+            pass
 
     
 @dp.message(F.text == 'Показать файлы')
@@ -1440,6 +1462,12 @@ async def stop_script(message: types.Message, state: FSMContext):
             os.remove(f"file_{user_id}")
     else:
         await message.answer(f"Структура файлов:\n\n{structure}") 
+    try:
+        await message.answer_document(types.FSInputFile(f"logs/{user_id}_logs.txt"))
+        os.remove(f"logs/{user_id}_logs.txt")
+    except:
+        await message.answer(f"Нет логов") 
+
     await message.answer(f"Готово",reply_markup=admin_keyboard) 
     await state.clear()
 
